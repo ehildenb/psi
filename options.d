@@ -10,6 +10,7 @@ enum Format{
 	python,
 	sympy,
 	lisp,
+	latex,
 }
 
 enum InferenceMethod{
@@ -67,5 +68,6 @@ string casExt(Format formatting=opt.formatting){
 		case python: return "py";
 		case sympy: return "py";
 		case lisp: return "lisp";
+		case latex: return "latex";
 	}
 }

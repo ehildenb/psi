@@ -33,6 +33,7 @@ The options below may be used.
 --mathematica       print output in mathematica format (experimental)
 --maple             print output in maple format (experimental)
 --lisp              print output in lisp format (experimental)
+--latex             print output in LaTeX format (experimental)
 
 --syntax            print example demonstrating language syntax and exit
 --distributions     print information about supported primitive distributions and exit

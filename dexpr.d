@@ -565,6 +565,8 @@ abstract class DVar: DExpr{
 			foreach(x;0..10)
 				nname=nname.replace(""d~cast(dchar)('₀'+x),""d~cast(dchar)('0'+x));
 			return nname.to!string;
+		} else if (formatting == Format.latex) {
+            return " " ~ asciify(name) ~ " ";
 		}
 		return name;
 	}
@@ -776,6 +778,7 @@ class DΠ: DExpr{
 		if(formatting==Format.matlab) return "pi";
 		if(formatting==Format.maple) return "Pi";
 		if(formatting==Format.mathematica) return "Pi";
+		if(formatting==Format.latex) return "\\pi";
 		else return "π";
 	}
 	mixin Constant;
@@ -1071,6 +1074,7 @@ class DMult: DCommutAssocOp{
 	override string symbol(Format formatting,int binders){
 		if(formatting==Format.gnuplot||formatting==Format.python||formatting==Format.maple||formatting==Format.sympy||formatting==Format.mathematica||formatting==Format.lisp) return "*";
 		else if(formatting==Format.matlab) return ".*";
+		else if(formatting==Format.latex) return " * ";
 		else return "·";
 	}
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
@@ -2522,6 +2526,14 @@ class DIvr: DExpr{ // iverson brackets
 				case lZ: assert(0);
 				case leZ: return text("Boole[",es,"<=0]");
 				}
+			}else if(formatting==Format.latex){
+				auto es=e.toStringImpl(formatting,Precedence.none,binders);
+				final switch(type){
+				case eqZ: return text(es, " = 0");
+				case neqZ: return text(es," \\neq 0");
+				case lZ: assert(0);
+				case leZ: return text(es, " \\leq 0");
+				}
 			}else if(formatting==Format.maple){
 				//return "piecewise("~e.toStringImpl(formatting,Precedence.none)~(type==eqZ?"=":type==neqZ?"<>":type==lZ?"<":"<=")~"0,1,0)";
 				auto es=e.toStringImpl(formatting,Precedence.none,binders);
@@ -2839,6 +2851,8 @@ class DDelta: DExpr{ // Dirac delta, for ℝ
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.mathematica){
 			return text("DiracDelta[",var.toStringImpl(formatting,Precedence.none,binders),"]");
+		}else if(formatting==Format.latex){
+			return text("\\delta \\left( ",var.toStringImpl(formatting,Precedence.none,binders)," \\right)");
 		}else if(formatting==Format.maple){
 			return text("Dirac(",var.toStringImpl(formatting,Precedence.none,binders),")");
 			/+auto vars=var.toStringImpl(formatting,Precedence.none);
@@ -2899,6 +2913,8 @@ class DDiscDelta: DExpr{ // point mass for discrete data types
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.mathematica)
 			return text("DiracDelta[",(e-var).toStringImpl(formatting,Precedence.none,binders),"]");
+		if(formatting==Format.latex)
+			return text("\\delta \\left( ",(e-var).toStringImpl(formatting,Precedence.none,binders)," \\right)");
 		if(formatting==Format.lisp) // TODO: better name
 			return text("(dirac2 ",var.toStringImpl(formatting,Precedence.subscript,binders),e.toStringImpl(formatting,Precedence.none,binders),")");
 		// TODO: encoding for other CAS?
@@ -3059,6 +3075,8 @@ class DInt: DOp{
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.mathematica){
 			return text("Integrate[",expr.toStringImpl(formatting,Precedence.none,binders+1),",{",DDeBruijnVar.displayName(1,formatting,binders+1),",-Infinity,Infinity}]");
+		}else if(formatting==Format.latex){
+			return text("\\int_{-\\infty}^{+\\infty}",expr.toStringImpl(formatting,Precedence.none,binders+1),DDeBruijnVar.displayName(1,formatting,binders+1));
 		}else if(formatting==Format.maple){
 			return text("int(",expr.toStringImpl(formatting,Precedence.none,binders+1),",",DDeBruijnVar.displayName(1,formatting,binders+1),"=-infinity..infinity)");
 		}else if(formatting==Format.python||formatting==Format.sympy){
@@ -3124,6 +3142,8 @@ class DSum: DOp{
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.mathematica){
 			return text("Sum[",expr.toStringImpl(formatting,Precedence.none,binders+1),",{",DDeBruijnVar.displayName(1,formatting,binders+1),",-Infinity,Infinity}]");
+		}else if(formatting==Format.latex){
+			return text("\\sum_{-\\infty}^{+\\infty}",expr.toStringImpl(formatting,Precedence.none,binders+1),DDeBruijnVar.displayName(1,formatting,binders+1)); // TODO: correct?
 		}else if(formatting==Format.maple){
 			return text("sum(",expr.toStringImpl(formatting,Precedence.none,binders+1),",",DDeBruijnVar.displayName(1,formatting,binders+1),"=-infinity..infinity)"); // TODO: correct?
 		}else if(formatting==Format.python||formatting==Format.sympy){
@@ -3272,6 +3292,7 @@ class DLog: DOp{
 		auto es=e.toStringImpl(formatting,Precedence.none,binders);
 		if(formatting==Format.python) return text("nan_to_num(log(",es,"))");
 		if(formatting==Format.mathematica) return text("Log[",es,"]");
+		if(formatting==Format.latex) return text("\\ln \\left(",es,"\\right)");
 		return text("log(",es,")");
 	}
 	mixin Visitors;
@@ -3325,6 +3346,7 @@ class DSin: DOp{
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.lisp) return text("(sin ",e.toStringImpl(formatting,Precedence.none,binders),")");
 		if(formatting==Format.mathematica) return text("Sin[",e.toStringImpl(formatting,Precedence.none,binders),"]");
+		if(formatting==Format.latex)       return text("sin \\left(",e.toStringImpl(formatting,Precedence.none,binders),"\\right)");
 		return "sin("~e.toStringImpl(formatting,Precedence.none,binders)~")";
 	}
 	mixin Visitors;
@@ -3348,6 +3370,7 @@ class DFloor: DOp{
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.default_)   return "⌊"~e.toStringImpl(formatting,Precedence.none,binders)~"⌋";
 		if(formatting==Format.lisp) return text("(floor ",e.toStringImpl(formatting,Precedence.none,binders),")");
+		if(formatting==Format.latex) return text("\\left \\lfloor  ",e.toStringImpl(formatting,Precedence.none,binders)," \\right \\rfloor ");
 		return text("floor(",e.toStringImpl(formatting,Precedence.none,binders),")");
 	}
 	mixin Visitors;
@@ -3372,6 +3395,7 @@ class DCeil: DOp{
 	override Precedence precedence(){ return Precedence.none; }
 	override string toStringImpl(Format formatting,Precedence prec,int binders){
 		if(formatting==Format.lisp) return text("(ceil ",e.toStringImpl(formatting,Precedence.none,binders),")");
+		if(formatting==Format.latex) return text("\\left \\lceil  ",e.toStringImpl(formatting,Precedence.none,binders)," \\right \\rceil ");
 		return "⌈"~e.toStringImpl(formatting,Precedence.none,binders)~"⌉";
 	}
 	mixin Visitors;
@@ -3490,6 +3514,7 @@ mixin FactoryFunction!DBitOr;
 mixin FactoryFunction!DBitXor;
 mixin FactoryFunction!DBitAnd;
 
+// TODO: Should be using printer for "DPi" instead of manually printing Pi in each case here.
 class DGaussInt: DOp{
 	DExpr x;
 	alias subExprs=Seq!x;
@@ -3500,6 +3525,8 @@ class DGaussInt: DOp{
 			return "sqrt(pi)*(erf("~x.toStringImpl(formatting,Precedence.none,binders)~")+1)/2";
 		}else if(formatting==Format.mathematica){
 			return "Sqrt[Pi]*(Erf["~x.toStringImpl(formatting,Precedence.none,binders)~"]+1)/2";
+		}else if(formatting==Format.latex){
+			return "\\sqrt{\\pi} * \\frac{ erf \\left("~x.toStringImpl(formatting,Precedence.none,binders)~"\\right) + 1 }{ 2 }";
 		}else if(formatting==Format.maple){
 			return "sqrt(Pi)*(erf("~x.toStringImpl(formatting,Precedence.none,binders)~")+1)/2";
 		}else if(formatting==Format.matlab) return "(sqrt(pi)*(erf("~x.toStringImpl(formatting,Precedence.none,binders)~")+1)/2)";
